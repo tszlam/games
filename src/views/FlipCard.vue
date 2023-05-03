@@ -1,5 +1,6 @@
 <template>
   <div>
+  Num Per Pair:<input type="number" v-model="numPerPair"/>
   Pairs: <input type="number" v-model="pairs"/>
   Seconds: <input type="number" v-model="secToMemorize"/>
   Froze: <input type="number" v-model="secForze">
@@ -29,7 +30,7 @@ const CARD_STATE = {
   PAIRING: 1,
   PAIRED: 2,
 }
-const numPerPair = 2
+const numPerPair = ref(2)
 const pairs = ref(6)
 const secToMemorize = ref(5)
 const secToPlay = ref(0)
@@ -50,7 +51,7 @@ let board = reactive(getXYByPairs(0))
  */
 function getXYByPairs (pairs) {
   if (!pairs) return { row: 0, column: 0 };
-  const total = pairs * 2
+  const total = pairs * numPerPair.value
   let width = pairs
   let res = width
   while (width > 0) {
@@ -67,13 +68,13 @@ function getXYByPairs (pairs) {
 // 在数组里随机安排n对
 function genRandomCards(pairs) {
   // 初始化一个有两个pairs的数组, flag用于记录是否已经被翻牌，已翻的牌再次点击不生效
-  const length = pairs * numPerPair
+  const length = pairs * numPerPair.value
   // value生成
   let value = 0
   let count = 0
   const getValue = () => {
       if (count === 0 ) {
-        count = numPerPair
+        count = numPerPair.value
         value++
       }
       count--
@@ -121,7 +122,7 @@ function handleClickCard(row, column) {
     }, secForze.value * 1000)
     return
   }
-  if (pairingStack.length + 1 < numPerPair) {
+  if (pairingStack.length + 1 < numPerPair.value) {
     card.state = CARD_STATE.PAIRING
     pairingStack.push(card)
   }
@@ -148,7 +149,7 @@ function start() {
   state.cards = genRandomCards(pairs.value)
   pairingStack = []
   isPlaying.value = false
-  countDown(secToMemorize.value)
+  countDown(secToMemorize.value >= 0 ? secToMemorize.value : 0)
 }
 </script>
 
