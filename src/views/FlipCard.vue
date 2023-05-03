@@ -1,7 +1,12 @@
 <template>
-  <input type="number" v-model="pairs"/>
-  <button @click="restart">New Game</button>
-  <div>STAET: {{ isFinished ? 'FINISHED' : 'UN FINISH' }}</div>
+  <div>
+  Pairs: <input type="number" v-model="pairs"/>
+  Seconds: <input type="number" v-model="secToMemorize"/>
+  Froze: <input type="number" v-model="secForze">
+  <button @click="start">New Game</button>
+  </div>
+  <div v-if="isPlaying">STAET: {{ isFinished ? 'FINISHED' : 'UN FINISH' }}</div>
+  <div v-else>{{ secToPlay ? `${secToPlay} sec to start` : '' }}</div>
   <div class="board">
     <div class="row" v-for="r in board.row" :key="`r_${r}`">
       <div class="box" v-for="c in board.column" :key="`${r}_${c}`"
@@ -11,14 +16,13 @@
         }"
         @click="handleClickCard(r, c)"
       >
-        {{ getCardNumber(r, c).value }}
+        <span v-show="getCardNumber(r, c).state !== CARD_STATE.PENDING || !isPlaying">{{ getCardNumber(r, c).value }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-// todo: 开始时倒数，倒数是可以看数字，倒数结束后开始游戏，游戏是不可以看数字，只有激发态才可以看到数字
 import { ref, reactive, computed } from 'vue';
 const CARD_STATE = {
   PENDING: 0,
@@ -27,18 +31,25 @@ const CARD_STATE = {
 }
 const numPerPair = 2
 const pairs = ref(6)
+const secToMemorize = ref(5)
+const secToPlay = ref(0)
+const secForze = ref(0.5)
+const isPlaying = ref(false)
+const isChecking = ref(false)
 const state = reactive({
-  cards: []
+  cards: genRandomCards(0)
 })
+const isFinished = computed(() => state.cards.every(({ state: _s }) => _s === CARD_STATE.PAIRED ))
 let pairingStack = [];
-// 这个输入对数，会算出对应个数最近似正方形的宽高边个数，宽 > 高
-// eg: 12 => [4, 3]
+let board = reactive(getXYByPairs(0))
+
 /**
  * 这个输入对数，会算出对应个数最近似正方形的行数和列数，列 > 行
  * eg: 12 => { row: 3, column: 4 }
  * @param {number} pairs 
  */
-const getXYByPairs = (pairs) => {
+function getXYByPairs (pairs) {
+  if (!pairs) return { row: 0, column: 0 };
   const total = pairs * 2
   let width = pairs
   let res = width
@@ -54,7 +65,7 @@ const getXYByPairs = (pairs) => {
   }
 }
 // 在数组里随机安排n对
-const genRandomCards = (pairs) => {
+function genRandomCards(pairs) {
   // 初始化一个有两个pairs的数组, flag用于记录是否已经被翻牌，已翻的牌再次点击不生效
   const length = pairs * numPerPair
   // value生成
@@ -83,11 +94,12 @@ const genRandomCards = (pairs) => {
   }
   return cards;
 }
-const getCardNumber = (row, column) => {
+function getCardNumber(row, column) {
   return state.cards[(row - 1) * board.column + column - 1];
 }
 
-const handleClickCard = (row, column) => {
+function handleClickCard(row, column) {
+  if (isChecking.value) return
   const card = getCardNumber(row, column);
   const { value, state } = card
   if (state !== CARD_STATE.PENDING) return;
@@ -97,10 +109,16 @@ const handleClickCard = (row, column) => {
     return;
   }
   if (pairingStack[0].value !== value) {
-    pairingStack.forEach(_card => {
-      _card.state = CARD_STATE.PENDING
-    })
-    pairingStack = []
+    isChecking.value = true
+    card.state = CARD_STATE.PAIRING
+    pairingStack.push(card)
+    setTimeout(() => {
+      pairingStack.forEach(_card => {
+        _card.state = CARD_STATE.PENDING
+      })
+      pairingStack = []
+      isChecking.value = false
+    }, secForze.value * 1000)
     return
   }
   if (pairingStack.length + 1 < numPerPair) {
@@ -114,17 +132,24 @@ const handleClickCard = (row, column) => {
   pairingStack = []
 }
 
-const restart = () => {
+function countDown(sec) {
+  secToPlay.value = sec
+  if (sec === 0) {
+    isPlaying.value = true
+    return
+  }
+  setTimeout(() => {
+    countDown(secToPlay.value - 1)
+  }, 1000)
+}
+
+function start() {
   board = reactive(getXYByPairs(pairs.value))
   state.cards = genRandomCards(pairs.value)
   pairingStack = []
+  isPlaying.value = false
+  countDown(secToMemorize.value)
 }
-
-// 返回
-let board = reactive(getXYByPairs(pairs.value))
-state.cards = genRandomCards(pairs.value);
-const isFinished = computed(() => state.cards.every(({ state: _s }) => _s === CARD_STATE.PAIRED ))
-
 </script>
 
 <style scoped>
