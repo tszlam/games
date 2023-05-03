@@ -4,7 +4,8 @@
   Pairs: <input type="number" v-model="pairs"/>
   Seconds: <input type="number" v-model="secToMemorize"/>
   Froze: <input type="number" v-model="secForze">
-  <button @click="start">New Game</button>
+  <button :disabled="isPlaying" @click="start">New Game</button>
+  <button :disabled="!isPlaying" @click="end">End Game</button>
   </div>
   <div v-if="isPlaying">STAET: {{ isFinished ? 'FINISHED' : 'UN FINISH' }}</div>
   <div v-else>{{ secToPlay ? `${secToPlay} sec to start` : '' }}</div>
@@ -24,12 +25,22 @@
 </template>
 
 <script setup>
+// GAME STATE: SETTING -> MEMORIZING -> MATCHING -> [FROZE -> MATCHING] -> FINISHED/END
+// todo: 游戏的状态，操作逻辑怎么管理
 import { ref, reactive, computed } from 'vue';
 const CARD_STATE = {
   PENDING: 0,
   PAIRING: 1,
   PAIRED: 2,
 }
+// const GAME_STATE = {
+//   SETTING: 0,
+//   MEMORIZING: 1,
+//   MATCHING: 2,
+//   FROZE: 3,
+//   FINISHED: 4,
+//   END: 5
+// }
 const numPerPair = ref(2)
 const pairs = ref(6)
 const secToMemorize = ref(5)
@@ -151,6 +162,9 @@ function start() {
   pairingStack = []
   isPlaying.value = false
   countDown(secToMemorize.value >= 0 ? secToMemorize.value : 0)
+}
+function end() {
+  isPlaying.value = false
 }
 </script>
 
