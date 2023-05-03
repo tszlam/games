@@ -100,6 +100,7 @@ function getCardNumber(row, column) {
 }
 
 function handleClickCard(row, column) {
+  if (!isPlaying.value) return
   if (isChecking.value) return
   const card = getCardNumber(row, column);
   const { value, state } = card
